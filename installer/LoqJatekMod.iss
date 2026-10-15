@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 
 [Setup]
@@ -42,6 +42,12 @@ Name: "{autodesktop}\LOQ Játék Mód"; Filename: "{app}\LoqJatekMod.exe"; Tasks
 
 [Run]
 Filename: "{app}\LoqJatekMod.exe"; Description: "LOQ Játék Mód indítása"; Flags: nowait postinstall skipifsilent shellexec
+
+[UninstallRun]
+Filename: "{app}\LoqJatekMod.exe"; Parameters: "--visszaallit"; Flags: runhidden waituntilterminated; RunOnceId: "Visszaallitas"
+
+[Registry]
+Root: HKLM; Subkey: "SOFTWARE\Botirocky\LoqJatekMod"; Flags: uninsdeletekey
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{commonappdata}\LoqJatekMod"

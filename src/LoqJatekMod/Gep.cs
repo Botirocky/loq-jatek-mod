@@ -23,7 +23,7 @@ public sealed class Gep
             using var kereso = new ManagementObjectSearcher(wql);
             return kereso.Get().Cast<ManagementObject>().ToList();
         }
-        catch (ManagementException)
+        catch (Exception)
         {
             return Array.Empty<ManagementObject>();
         }
@@ -39,23 +39,22 @@ public sealed class Gep
 
     public static Gep Felmer()
     {
-        var rendszer = Lekerdez("SELECT Manufacturer, Model FROM Win32_ComputerSystem").FirstOrDefault();
+        var rendszer = Lekerdez("SELECT Manufacturer, Model, TotalPhysicalMemory FROM Win32_ComputerSystem").FirstOrDefault();
         var termek = Lekerdez("SELECT Version FROM Win32_ComputerSystemProduct").FirstOrDefault();
         var cpu = Lekerdez("SELECT Name FROM Win32_Processor").FirstOrDefault();
-        var ram = Lekerdez("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem").FirstOrDefault();
         var gep = new Gep
         {
             Gyarto = Szoveg(rendszer, "Manufacturer"),
             Modell = $"{Szoveg(termek, "Version")} ({Szoveg(rendszer, "Model")})".Trim(),
             Processzor = Szoveg(cpu, "Name"),
-            RamGb = double.TryParse(Szoveg(ram, "TotalPhysicalMemory"), out var b) ? b / 1024 / 1024 / 1024 : 0,
+            RamGb = double.TryParse(Szoveg(rendszer, "TotalPhysicalMemory"), out var b) ? b / 1024 / 1024 / 1024 : 0,
         };
         foreach (var v in Lekerdez("SELECT Name, DriverVersion FROM Win32_VideoController"))
             gep.Videokartyak.Add((Szoveg(v, "Name"), Szoveg(v, "DriverVersion")));
         return gep;
     }
 
-    public string Osszefoglalo()
+    public string Osszefoglalo(int? mod)
     {
         var sorok = new List<string>
         {
@@ -67,7 +66,6 @@ public sealed class Gep
             sorok.Add(nev.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase)
                 ? $"GPU: {nev} – driver {NvidiaVerzio(driver)}"
                 : $"GPU: {nev} – driver {driver}");
-        var mod = LenovoModBeallitas.Lekerdez();
         sorok.Add("Lenovo mód: " + mod switch
         {
             1 => "Csendes",

@@ -25,8 +25,13 @@ Ezen felül:
 - **Driverek:** gyors link az NVIDIA App és a Lenovo támogatási oldal letöltéséhez.
 
 Minden módosítás előtti értéket a `C:\ProgramData\LoqJatekMod\mentes.json` őriz meg; a
-**Minden visszaállítása** gomb ebből állít vissza. Eltávolításkor a mentés is törlődik, ezért
-előtte érdemes visszaállítani.
+**Minden visszaállítása** gomb ebből állít vissza. Ha egy visszaállítás nem sikerül, a mentett
+érték megmarad, és később újra lehet próbálni. **Eltávolításkor a telepítő először mindent
+visszaállít**, csak utána törli a mentést.
+
+A felhasználói beállítások (Játék mód, Game DVR, egér, játékonkénti GPU) a bejelentkezett
+fiókra vonatkoznak. Ha a UAC-ablakban **másik** rendszergazda-fiók adatait adod meg, ezek annak
+a fióknak a beállításai lesznek – ezért a saját, rendszergazdai jogú fiókodból futtasd.
 
 Tudatosan **nem** nyúl hozzá: Windows Defender, memóriaintegritás (VBS), szolgáltatások
 letiltása, telemetria – ezek biztonsági vagy stabilitási kockázattal járnak.

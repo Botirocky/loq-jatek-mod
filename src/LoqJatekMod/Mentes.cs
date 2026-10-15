@@ -10,8 +10,9 @@ public sealed class Mentes
 
     public Dictionary<string, string?> Ertekek { get; set; } = new();
 
-    public static Mentes Betolt()
+    public static Mentes Betolt(out string? hiba)
     {
+        hiba = null;
         try
         {
             if (File.Exists(Fajl))
@@ -19,6 +20,19 @@ public sealed class Mentes
         }
         catch (JsonException)
         {
+            var serult = Fajl + $".serult-{DateTime.Now:yyyyMMdd-HHmmss}";
+            try
+            {
+                File.Move(Fajl, serult);
+            }
+            catch (IOException)
+            {
+            }
+            hiba = $"A mentésfájl sérült volt, félretettem: {serult}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            hiba = $"A mentésfájl nem olvasható: {ex.Message}";
         }
         return new Mentes();
     }
@@ -26,10 +40,14 @@ public sealed class Mentes
     public void Ment()
     {
         Directory.CreateDirectory(Mappa);
-        File.WriteAllText(Fajl, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        var ideiglenes = Fajl + ".uj";
+        File.WriteAllText(ideiglenes, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        File.Move(ideiglenes, Fajl, true);
     }
 
     public bool Van(string kulcs) => Ertekek.ContainsKey(kulcs);
+
+    public string? Olvas(string kulcs) => Ertekek.GetValueOrDefault(kulcs);
 
     public void Elsore(string kulcs, string? ertek)
     {
@@ -37,9 +55,5 @@ public sealed class Mentes
             Ertekek[kulcs] = ertek;
     }
 
-    public string? Kivesz(string kulcs)
-    {
-        Ertekek.Remove(kulcs, out var ertek);
-        return ertek;
-    }
+    public void Torol(string kulcs) => Ertekek.Remove(kulcs);
 }

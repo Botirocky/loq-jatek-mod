@@ -11,7 +11,9 @@ public sealed class FoAblak : Form
     private static readonly Color Kiemel = Color.FromArgb(118, 185, 0);
 
     private readonly List<Beallitas> _beallitasok = Keszlet.Mind();
-    private readonly Mentes _mentes = Mentes.Betolt();
+    private readonly Mentes _mentes;
+    private readonly string? _mentesHiba;
+    private readonly HashSet<string> _ujraindulasra = new();
     private readonly ListView _lista = new();
     private readonly ListBox _jatekok = new();
     private readonly TextBox _gepInfo = new();
@@ -21,6 +23,7 @@ public sealed class FoAblak : Form
 
     public FoAblak()
     {
+        _mentes = Mentes.Betolt(out _mentesHiba);
         Text = "LOQ Játék Mód";
         Size = new Size(980, 760);
         MinimumSize = new Size(820, 640);
@@ -105,7 +108,12 @@ public sealed class FoAblak : Form
         also.Controls.Add(Csoport("Napló", _naplo), 1, 0);
         fo.Controls.Add(also);
 
-        Shown += (_, _) => Frissit();
+        Shown += (_, _) =>
+        {
+            if (_mentesHiba != null)
+                Naplo(_mentesHiba);
+            Frissit();
+        };
     }
 
     private static Button Gomb(string szoveg, EventHandler kattint, bool fo = false)
@@ -143,7 +151,7 @@ public sealed class FoAblak : Form
         try
         {
             _gep = Gep.Felmer();
-            _gepInfo.Text = _gep.Osszefoglalo();
+            _gepInfo.Text = _gep.Osszefoglalo(LenovoModBeallitas.Lekerdez());
             _figyelmeztetes.Text = _gep.EzAGep
                 ? "Lenovo LOQ + RTX 5060 felismerve – minden beállítás erre a gépre van hangolva."
                 : "Figyelem: ez nem a Lenovo LOQ / RTX 5060 gép. A beállítások működhetnek, de nem erre készültek.";
@@ -163,8 +171,8 @@ public sealed class FoAblak : Form
                     aktiv = null;
                 }
                 var allapot = aktiv switch { true => "BE", false => "ki", null => "nem elérhető" };
-                if (b.UjraindulasKell)
-                    allapot += aktiv == true ? "" : " (újraind.)";
+                if (_ujraindulasra.Contains(b.Azonosito))
+                    allapot += " – újraindítás után";
                 var elem = new ListViewItem(new[] { b.Nev, allapot, b.Leiras })
                 {
                     Tag = b.Azonosito,
@@ -178,6 +186,10 @@ public sealed class FoAblak : Form
             _jatekok.Items.Clear();
             foreach (var j in JatekGpu.Lista())
                 _jatekok.Items.Add(j);
+        }
+        catch (Exception ex)
+        {
+            Naplo($"Frissítési hiba: {ex.Message}");
         }
         finally
         {
@@ -202,7 +214,11 @@ public sealed class FoAblak : Form
                 }
                 b.Bekapcsol(_mentes);
                 _mentes.Ment();
-                ujraindulas |= b.UjraindulasKell;
+                if (b.UjraindulasKell)
+                {
+                    ujraindulas = true;
+                    _ujraindulasra.Add(b.Azonosito);
+                }
                 Naplo($"{b.Nev}: BEKAPCSOLVA");
             }
             catch (Exception ex)
@@ -220,19 +236,12 @@ public sealed class FoAblak : Form
         if (MessageBox.Show(this, "Minden módosítást visszaállítsak az eredeti értékre?", Text,
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             return;
-        foreach (var b in _beallitasok)
-        {
-            try
-            {
-                b.Visszaallit(_mentes);
-                Naplo($"{b.Nev}: visszaállítva");
-            }
-            catch (Exception ex)
-            {
-                Naplo($"{b.Nev}: HIBA – {ex.Message}");
-            }
-        }
-        _mentes.Ment();
+        var hibak = Keszlet.VisszaallitMind(_mentes);
+        foreach (var h in hibak)
+            Naplo($"HIBA – {h} (a mentett érték megmaradt, később újrapróbálható)");
+        Naplo(hibak.Count == 0 ? "Minden beállítás visszaállítva." : "A visszaállítás részben sikerült.");
+        foreach (var b in _beallitasok.Where(b => b.UjraindulasKell))
+            _ujraindulasra.Add(b.Azonosito);
         Frissit();
     }
 
