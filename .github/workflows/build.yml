@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Verzió
+        id: verzio
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") { $v = "${{ github.ref_name }}".TrimStart("v") } else { $v = "1.0.0" }
+          "verzio=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Publish (önálló, egyfájlos exe)
+        run: >
+          dotnet publish src/LoqJatekMod -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:Version=${{ steps.verzio.outputs.verzio }}
+          -o publish
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc "/DAppVersion=${{ steps.verzio.outputs.verzio }}" installer\LoqJatekMod.iss
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LoqJatekMod-${{ steps.verzio.outputs.verzio }}
+          path: |
+            dist/*.exe
+            publish/LoqJatekMod.exe
+
+      - name: Kiadás
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          generate_release_notes: true
